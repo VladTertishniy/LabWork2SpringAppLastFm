@@ -16,7 +16,7 @@ public class MainController {
     }
 
     @RequestMapping(path = "/test2/{abc}")
-    public String getFuckingChtoto (@PathVariable(name = "abc") String xyz) {
+    public String getSmth (@PathVariable(name = "abc") String xyz) {
         return "test2 " + xyz;
     }
 }
