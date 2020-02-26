@@ -16,7 +16,7 @@
     <packaging>war</packaging>
 
     <properties>
-        <java.version>1.8</java.version>
+        <java.version>1.13</java.version>
     </properties>
 
     <dependencies>
@@ -55,6 +55,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-tomcat</artifactId>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20180130</version>
         </dependency>
     </dependencies>
 

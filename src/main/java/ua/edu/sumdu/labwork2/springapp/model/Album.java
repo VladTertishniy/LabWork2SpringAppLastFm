@@ -1,5 +1,7 @@
 package ua.edu.sumdu.labwork2.springapp.model;
 
+import java.util.HashMap;
+
 public class Album {
 
     String name;
