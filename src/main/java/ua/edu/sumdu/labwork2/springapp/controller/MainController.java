@@ -1,14 +1,19 @@
 package ua.edu.sumdu.labwork2.springapp.controller;
 
+
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.bind.annotation.*;
+import ua.edu.sumdu.labwork2.springapp.model.*;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.LocalDateTime;
 
 
 @RestController
@@ -55,8 +60,62 @@ public class MainController {
                 connection.disconnect();
             }
         }
-        JSONObject jsonObject = new JSONObject(result);
-//        Object tracks = jsonObject.get("track");
-        return "test2 " + artist + album;
+
+        JSONObject albumJsonObject = new JSONObject(result).getJSONObject("album");
+
+//       Object tracks = jsonObject.get("track");
+
+        Album parsedAlbum = new Album();
+        parsedAlbum.setArtist(new Artist(albumJsonObject.getString("artist")));
+        parsedAlbum.setListeners(albumJsonObject.getInt("listeners"));
+        parsedAlbum.setName(albumJsonObject.getString("name"));
+        parsedAlbum.setPlaycount(albumJsonObject.getInt("playcount"));
+        parsedAlbum.setPublished(parseDate(albumJsonObject.getJSONObject("wiki").getString("published")));
+        parsedAlbum.setSummary(albumJsonObject.getJSONObject("wiki").getString("summary"));
+        parsedAlbum.setUrl(albumJsonObject.getString("url"));
+
+        JSONArray jsonArray = albumJsonObject.getJSONObject("tracks").getJSONArray("track");
+        for (Object t : jsonArray) {
+            JSONObject jsonTrack = (JSONObject) t;
+            Track track = new Track();
+            track.setDuration(jsonTrack.getInt("duration"));
+            track.setName(jsonTrack.getString("name"));
+            track.setUrl(jsonTrack.getString("url"));
+            parsedAlbum.getTracks().add(track);
+        }
+
+        JSONArray jsonArrayTags = albumJsonObject.getJSONObject("tags").getJSONArray("tag");
+        for (Object tagObject : jsonArrayTags) {
+            JSONObject jsonTag = (JSONObject) tagObject;
+            Tag tag = new Tag();
+            tag.setName(jsonTag.getString("name"));
+            tag.setUrl(jsonTag.getString("url"));
+            parsedAlbum.getTags().add(tag);
+        }
+
+        JSONArray jsonImages = albumJsonObject.getJSONArray("image");
+        for (Object imageObject : jsonImages) {
+            JSONObject jsonImage = (JSONObject) imageObject;
+            Image image = new Image();
+            try {
+                image.setUrl(new URL(jsonImage.getString("#text")));
+            } catch (MalformedURLException e) {
+                throw new RuntimeException(e);
+            }
+
+            image.setSize(jsonImage.getString("size"));
+            parsedAlbum.getImages().add(image);
+        }
+
+        try {
+            return new JsonMapper().writer().writeValueAsString(parsedAlbum);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private LocalDateTime parseDate(String date) {
+        // todo
+        return LocalDateTime.now();
     }
 }
