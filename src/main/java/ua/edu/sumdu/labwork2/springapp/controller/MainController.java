@@ -4,8 +4,10 @@ package ua.edu.sumdu.labwork2.springapp.controller;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import ua.edu.sumdu.labwork2.springapp.model.*;
+import ua.edu.sumdu.labwork2.springapp.services.impl.AlbumServiceIml;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -19,6 +21,8 @@ import java.time.LocalDateTime;
 @RestController
 @RequestMapping(path = "/api")
 public class MainController {
+
+    public AlbumServiceIml albumServiceIml;
 
     @RequestMapping(
             path = "/test",
@@ -102,10 +106,12 @@ public class MainController {
             } catch (MalformedURLException e) {
                 throw new RuntimeException(e);
             }
-
             image.setSize(jsonImage.getString("size"));
             parsedAlbum.getImages().add(image);
         }
+
+        albumServiceIml.saveToFile(parsedAlbum);
+
 
         try {
             return new JsonMapper().writer().writeValueAsString(parsedAlbum);
@@ -117,5 +123,9 @@ public class MainController {
     private LocalDateTime parseDate(String date) {
         // todo
         return LocalDateTime.now();
+    }
+
+    public MainController(AlbumServiceIml albumServiceIml) {
+        this.albumServiceIml = albumServiceIml;
     }
 }
