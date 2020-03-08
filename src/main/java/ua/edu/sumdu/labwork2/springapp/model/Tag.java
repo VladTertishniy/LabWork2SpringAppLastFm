@@ -5,11 +5,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.net.URL;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Tag {
     private String name;
-    private String url;
+    private URL url;
 }

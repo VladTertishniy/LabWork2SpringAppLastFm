@@ -4,10 +4,10 @@ package ua.edu.sumdu.labwork2.springapp.controller;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import ua.edu.sumdu.labwork2.springapp.model.*;
 import ua.edu.sumdu.labwork2.springapp.services.impl.AlbumServiceIml;
+import ua.edu.sumdu.labwork2.springapp.services.impl.ImageDownloaderServiceImp;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,6 +16,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
+import java.util.Iterator;
 
 
 @RestController
@@ -40,8 +41,8 @@ public class MainController {
         try {
             connection = (HttpURLConnection) new URL("http://ws.audioscrobbler.com/2.0/?method=album.getinfo&api_key=b2abbb5334eaf31229236c6460ab5aec&artist=" + artist + "&album=" + album + "&format=json").openConnection();
             connection.setRequestMethod("GET");
-            connection.setConnectTimeout(250);
-            connection.setReadTimeout(250);
+            connection.setConnectTimeout(500);
+            connection.setReadTimeout(500);
             connection.connect();
 
             StringBuilder stringBuilder = new StringBuilder();
@@ -67,7 +68,6 @@ public class MainController {
 
         JSONObject albumJsonObject = new JSONObject(result).getJSONObject("album");
 
-//       Object tracks = jsonObject.get("track");
 
         Album parsedAlbum = new Album();
         parsedAlbum.setArtist(new Artist(albumJsonObject.getString("artist")));
@@ -84,7 +84,12 @@ public class MainController {
             Track track = new Track();
             track.setDuration(jsonTrack.getInt("duration"));
             track.setName(jsonTrack.getString("name"));
-            track.setUrl(jsonTrack.getString("url"));
+            try {
+                track.setUrl(new URL(jsonTrack.getString("url")));
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+
             parsedAlbum.getTracks().add(track);
         }
 
@@ -93,7 +98,12 @@ public class MainController {
             JSONObject jsonTag = (JSONObject) tagObject;
             Tag tag = new Tag();
             tag.setName(jsonTag.getString("name"));
-            tag.setUrl(jsonTag.getString("url"));
+            try {
+                tag.setUrl(new URL(jsonTag.getString("url")));
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+
             parsedAlbum.getTags().add(tag);
         }
 
@@ -104,13 +114,23 @@ public class MainController {
             try {
                 image.setUrl(new URL(jsonImage.getString("#text")));
             } catch (MalformedURLException e) {
-                throw new RuntimeException(e);
+                e.printStackTrace();
             }
             image.setSize(jsonImage.getString("size"));
             parsedAlbum.getImages().add(image);
         }
 
         albumServiceIml.saveToFile(parsedAlbum);
+        ImageDownloaderServiceImp fileDownloaderServiceImp = new ImageDownloaderServiceImp();
+        Iterator<Image> imageIterator = parsedAlbum.getImages().iterator();
+        URL maxImageSizeUrl = null;
+        while (imageIterator.hasNext()) {
+            maxImageSizeUrl = imageIterator.next().getUrl();
+        }
+        if (maxImageSizeUrl != null) {
+            fileDownloaderServiceImp.downloadFiles(maxImageSizeUrl, ".\\save", 512, parsedAlbum.getName() + parsedAlbum.getArtist().getName());
+        }
+
 
 
         try {

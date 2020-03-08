@@ -1,10 +1,7 @@
 package ua.edu.sumdu.labwork2.springapp.services.impl;
 
 import org.apache.poi.xwpf.model.XWPFHeaderFooterPolicy;
-import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
-import org.apache.poi.xwpf.usermodel.XWPFDocument;
-import org.apache.poi.xwpf.usermodel.XWPFParagraph;
-import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.*;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTP;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTR;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSectPr;
@@ -12,6 +9,8 @@ import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTText;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ua.edu.sumdu.labwork2.springapp.model.Album;
+import ua.edu.sumdu.labwork2.springapp.model.Tag;
+import ua.edu.sumdu.labwork2.springapp.model.Track;
 import ua.edu.sumdu.labwork2.springapp.services.AlbumService;
 
 import java.io.File;
@@ -68,19 +67,31 @@ public class AlbumServiceIml implements AlbumService {
                     new XWPFParagraph[]{footerParagraph}
             );
 
-            // создаем обычный параграф, который будет расположен слева,
-            // будет синим курсивом со шрифтом 25 размера
-            XWPFParagraph bodyParagraph = docxModel.createParagraph();
-            bodyParagraph.setAlignment(ParagraphAlignment.CENTER);
-            XWPFRun paragraphConfig = bodyParagraph.createRun();
-            paragraphConfig.setItalic(true);
-            paragraphConfig.setFontSize(16);
-            // HEX цвет без решетки #
-            paragraphConfig.setColor("4036d6");
+
+            createParagraph(docxModel).setText("Name: " + album.getName());
+            createParagraph(docxModel).setText("Artist: " + album.getArtist().getName());
+            createParagraph(docxModel).setText("Listeners: " + album.getListeners());
             StringBuilder builderParagraphBody = new StringBuilder();
-            builderParagraphBody.append("Name: ").append(album.getName()).append(System.lineSeparator());
-            builderParagraphBody.append("Artist: ").append(album.getArtist().getName()).append(System.lineSeparator());
-            paragraphConfig.setText(builderParagraphBody.toString());
+            builderParagraphBody.append("Tags: ");
+            for (Tag tag : album.getTags()) {
+                builderParagraphBody.append(tag.getName()).append(", ");
+            }
+            createParagraph(docxModel).setText(builderParagraphBody.toString());
+
+
+            //создаем таблицу
+            XWPFTable tracksTable = docxModel.createTable(album.getTracks().size() + 1,3);
+            tracksTable.getRow(0).getCell(0).setText("name");
+            tracksTable.getRow(0).getCell(1).setText("duration");
+            tracksTable.getRow(0).getCell(2).setText("url");
+            int RowCounter = 1;
+            for (Track track : album.getTracks()) {
+                tracksTable.getRow(RowCounter).getCell(0).setText(track.getName());
+                tracksTable.getRow(RowCounter).getCell(1).setText(String.valueOf(track.getDuration()));
+                tracksTable.getRow(RowCounter).getCell(2).setText(String.valueOf(track.getUrl())); // todo
+                RowCounter++;
+            }
+
 
             // сохраняем модель docx документа в файл
             File dir = new File(dirPath);
@@ -122,5 +133,16 @@ public class AlbumServiceIml implements AlbumService {
 
         cttHeader.setStringValue(headerContent);
         return ctpHeaderModel;
+    }
+
+    private static XWPFRun createParagraph (XWPFDocument docxModel) {
+        XWPFParagraph bodyParagraph = docxModel.createParagraph();
+        bodyParagraph.setAlignment(ParagraphAlignment.LEFT);
+        XWPFRun paragraphConfig = bodyParagraph.createRun();
+        paragraphConfig.setItalic(true);
+        paragraphConfig.setFontSize(16);
+        // HEX цвет без решетки #
+        paragraphConfig.setColor("4036d6");
+        return paragraphConfig;
     }
 }
