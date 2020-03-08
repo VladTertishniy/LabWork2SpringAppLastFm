@@ -1,5 +1,8 @@
 package ua.edu.sumdu.labwork2.springapp.services.impl;
 
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ua.edu.sumdu.labwork2.springapp.services.ImageDownloaderService;
 
@@ -11,15 +14,25 @@ import java.time.LocalDateTime;
 
 @Service
 public class ImageDownloaderServiceImp implements ImageDownloaderService {
+
+    @Getter
+    @Setter
+    private String dirPath;
+
+    public ImageDownloaderServiceImp(@Value("${lastfm.dir}") String dirPath) {
+        this.dirPath = dirPath;
+    }
+
     @Override
-    public void downloadFiles(URL connection, String strPath, int buffSize, String imageName) {
+    public File downloadImage(URL connection, int buffSize, String imageName) {
+        File fileImage = null;
         try {
-            File dir = new File(strPath);
+            File dir = new File(dirPath);
             if (!dir.exists()) {
                 dir.mkdir();
             }
             String pathImageFile = dir.getPath() + "\\" + imageName + LocalDateTime.now().getYear() + LocalDateTime.now().getMonth() + ".png";
-            File fileImage = new File(pathImageFile);
+            fileImage = new File(pathImageFile);
             if (!fileImage.exists()) {
                 fileImage.createNewFile();
             } else {
@@ -44,8 +57,10 @@ public class ImageDownloaderServiceImp implements ImageDownloaderService {
             writer.flush();
             writer.close();
             in.close();
+            return fileImage;
         } catch (IOException e) {
             System.out.println(e.toString());
         }
+        return fileImage;
     }
 }
