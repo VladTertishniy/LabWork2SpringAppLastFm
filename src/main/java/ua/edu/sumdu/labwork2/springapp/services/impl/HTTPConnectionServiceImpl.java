@@ -2,6 +2,7 @@ package ua.edu.sumdu.labwork2.springapp.services.impl;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ua.edu.sumdu.labwork2.springapp.services.HTTPConnectionService;
@@ -13,13 +14,15 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 @Service
-public class HTTPConnectionServiceImp implements HTTPConnectionService {
+public class HTTPConnectionServiceImpl implements HTTPConnectionService {
 
     @Getter
     @Setter
     private String apiKey;
 
-    public HTTPConnectionServiceImp(@Value("${lastfm.apikey}") String apiKey) {
+    final static Logger logger = Logger.getLogger(HTTPConnectionServiceImpl.class);
+
+    public HTTPConnectionServiceImpl(@Value("${lastfm.apikey}") String apiKey) {
         this.apiKey = apiKey;
     }
 
@@ -48,7 +51,8 @@ public class HTTPConnectionServiceImp implements HTTPConnectionService {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.info("Connection or reading result from server failed!", e);
+            System.out.println("Unexpected error!");
         } finally {
             if (connection != null) {
                 connection.disconnect();
