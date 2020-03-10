@@ -18,6 +18,7 @@ import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTR;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSectPr;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTText;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import ua.edu.sumdu.labwork2.springapp.model.*;
 import ua.edu.sumdu.labwork2.springapp.services.AlbumService;
@@ -44,6 +45,7 @@ public class AlbumServiceImpl implements AlbumService {
     }
 
     @Override
+    @Cacheable("albums")
     public Album parseFromString(String httpRequestResult) {
         Album parsedAlbum;
         JSONObject albumJsonObject;

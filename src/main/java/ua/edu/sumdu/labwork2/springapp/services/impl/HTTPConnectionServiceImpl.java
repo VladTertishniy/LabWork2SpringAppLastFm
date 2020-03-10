@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import ua.edu.sumdu.labwork2.springapp.services.HTTPConnectionService;
 
@@ -27,6 +28,7 @@ public class HTTPConnectionServiceImpl implements HTTPConnectionService {
     }
 
     @Override
+    @Cacheable("results")
     public String getRequestResult(String artistName, String albumName) {
         HttpURLConnection connection = null;
         String result = "";
