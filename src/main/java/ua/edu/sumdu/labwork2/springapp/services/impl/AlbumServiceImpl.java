@@ -19,6 +19,7 @@ import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSectPr;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTText;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import ua.edu.sumdu.labwork2.springapp.model.*;
 import ua.edu.sumdu.labwork2.springapp.services.AlbumService;
@@ -154,8 +155,8 @@ public class AlbumServiceImpl implements AlbumService {
             logger.info("Creating footer is failed!", e);
         }
         int format = XWPFDocument.PICTURE_TYPE_PNG;
-        try {
-            createParagraph(docxModel).addPicture(new FileInputStream(imageFile.getAbsoluteFile()), format, imageFile.getName(), Units.toEMU(300), Units.toEMU(300));
+        try(FileInputStream addPictureStream = new FileInputStream(imageFile.getAbsoluteFile())) {
+            createParagraph(docxModel).addPicture(addPictureStream, format, imageFile.getName(), Units.toEMU(300), Units.toEMU(300));
         } catch (InvalidFormatException | IOException e) {
             System.out.println("Unexpected error!");
             logger.info("Adding picture to paragraph is failed!", e);

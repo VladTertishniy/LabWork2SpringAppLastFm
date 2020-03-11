@@ -28,7 +28,6 @@ public class ImageDownloaderServiceImpl implements ImageDownloaderService {
     }
 
     @Override
-    @Cacheable("images")
     public File downloadImage(URL connection, int buffSize, String imageName) {
         File fileImage = null;
         try {

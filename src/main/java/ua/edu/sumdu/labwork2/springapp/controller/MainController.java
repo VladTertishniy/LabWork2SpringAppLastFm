@@ -4,6 +4,7 @@ package ua.edu.sumdu.labwork2.springapp.controller;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 import ua.edu.sumdu.labwork2.springapp.model.*;
 import ua.edu.sumdu.labwork2.springapp.services.impl.AlbumServiceImpl;
@@ -13,6 +14,7 @@ import ua.edu.sumdu.labwork2.springapp.services.impl.ImageDownloaderServiceImpl;
 import java.io.File;
 import java.net.URL;
 import java.util.Iterator;
+import java.util.concurrent.CompletableFuture;
 
 
 @RestController
@@ -25,8 +27,14 @@ public class MainController {
     final static Logger logger = Logger.getLogger(MainController.class);
 
     @RequestMapping(path = "/test2/{artist}/{album}", method = RequestMethod.GET)
-    public String getAlbumInfo (@PathVariable(name = "artist") String artistName, @PathVariable(name = "album") String albumName) {
+    @Async/*("workExecutor")*/
+    public CompletableFuture<String> getAlbumInfo (@PathVariable(name = "artist") String artistName, @PathVariable(name = "album") String albumName) {
 
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         logger.info("New request. Artist: " + artistName + ", album: " + albumName);
         String result = httpConnectionServiceImpl.getRequestResult(artistName, albumName);
         Album parsedAlbum = albumServiceImpl.parseFromString(result);
@@ -35,7 +43,7 @@ public class MainController {
             jsonObject.put("status", "error");
             jsonObject.put("message", "Album not found");
             logger.info(jsonObject.toString());
-            return jsonObject.toString();
+            return CompletableFuture.completedFuture(jsonObject.toString());
         }
 
         Iterator<Image> imageIterator = parsedAlbum.getImages().iterator();
@@ -49,7 +57,7 @@ public class MainController {
         }
 
         try {
-            return new JsonMapper().writer().writeValueAsString(parsedAlbum);
+            return CompletableFuture.completedFuture(new JsonMapper().writer().writeValueAsString(parsedAlbum));
         } catch (Throwable e) {
             logger.info("Data display failed!", e);
             throw new RuntimeException(e);
