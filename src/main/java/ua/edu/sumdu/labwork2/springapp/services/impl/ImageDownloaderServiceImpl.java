@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import ua.edu.sumdu.labwork2.springapp.services.ImageDownloaderService;
 
@@ -37,7 +36,8 @@ public class ImageDownloaderServiceImpl implements ImageDownloaderService {
                     logger.info("Directory " + dir.getAbsolutePath() + " is created!");
                 }
             }
-            String pathImageFile = dir.getPath() + "\\" + imageName + LocalDateTime.now().getYear() + LocalDateTime.now().getMonth() + ".png";
+            String correctImageName = imageName.replaceAll("[?*<>.\\\\/|:]", "_");
+            String pathImageFile = dir.getPath() + "\\" + correctImageName + LocalDateTime.now().getYear() + LocalDateTime.now().getMonth() + ".png";
             fileImage = new File(pathImageFile);
             if (fileImage.exists()) {
                 if (fileImage.delete()) {

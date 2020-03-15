@@ -1,13 +1,14 @@
 package ua.edu.sumdu.labwork2.springapp.controller;
 
-
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import lombok.AllArgsConstructor;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 import ua.edu.sumdu.labwork2.springapp.model.*;
-import ua.edu.sumdu.labwork2.springapp.services.impl.AlbumServiceImpl;
+import ua.edu.sumdu.labwork2.springapp.services.StringToAlbumConverter;
+import ua.edu.sumdu.labwork2.springapp.services.impl.SaveToDocFileServiceImpl;
 import ua.edu.sumdu.labwork2.springapp.services.impl.HTTPConnectionServiceImpl;
 import ua.edu.sumdu.labwork2.springapp.services.impl.ImageDownloaderServiceImpl;
 
@@ -16,28 +17,28 @@ import java.net.URL;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 
-
 @RestController
 @RequestMapping(path = "/api")
+@AllArgsConstructor
 public class MainController {
 
-    public AlbumServiceImpl albumServiceImpl;
+    public SaveToDocFileServiceImpl saveToDocFileServiceImpl;
     public HTTPConnectionServiceImpl httpConnectionServiceImpl;
     public ImageDownloaderServiceImpl imageDownloaderServiceImpl;
+    public StringToAlbumConverter stringToAlbumConverter;
     final static Logger logger = Logger.getLogger(MainController.class);
 
-    @RequestMapping(path = "/test2/{artist}/{album}", method = RequestMethod.GET)
-    @Async/*("workExecutor")*/
+    @RequestMapping(path = "/searchAlbumInfo/{artist}/{album}", method = RequestMethod.GET)
+    @Async
     public CompletableFuture<String> getAlbumInfo (@PathVariable(name = "artist") String artistName, @PathVariable(name = "album") String albumName) {
 
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         logger.info("New request. Artist: " + artistName + ", album: " + albumName);
-        String result = httpConnectionServiceImpl.getRequestResult(artistName, albumName);
-        Album parsedAlbum = albumServiceImpl.parseFromString(result);
+        URL urlConnection = httpConnectionServiceImpl.buildUrl(artistName, albumName);
+        if (urlConnection == null) {
+            return CompletableFuture.completedFuture("Unexpected error!");
+        }
+        String result = httpConnectionServiceImpl.getRequestResult(urlConnection);
+        Album parsedAlbum = stringToAlbumConverter.convert(result);
         if (parsedAlbum == null) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("status", "error");
@@ -53,7 +54,7 @@ public class MainController {
         }
         if (maxImageSizeUrl != null) {
             File image = imageDownloaderServiceImpl.downloadImage(maxImageSizeUrl, 512, parsedAlbum.getName() + parsedAlbum.getArtist().getName());
-            albumServiceImpl.saveToFile(parsedAlbum, image);
+            saveToDocFileServiceImpl.saveToFile(parsedAlbum, image);
         }
 
         try {
@@ -62,11 +63,5 @@ public class MainController {
             logger.info("Data display failed!", e);
             throw new RuntimeException(e);
         }
-    }
-
-    public MainController(AlbumServiceImpl albumServiceImpl, HTTPConnectionServiceImpl httpConnectionServiceImpl, ImageDownloaderServiceImpl imageDownloaderServiceImpl) {
-        this.albumServiceImpl = albumServiceImpl;
-        this.httpConnectionServiceImpl = httpConnectionServiceImpl;
-        this.imageDownloaderServiceImpl = imageDownloaderServiceImpl;
     }
 }
