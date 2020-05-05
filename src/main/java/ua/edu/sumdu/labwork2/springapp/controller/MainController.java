@@ -1,20 +1,19 @@
 package ua.edu.sumdu.labwork2.springapp.controller;
 
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import lombok.AllArgsConstructor;
 import org.apache.log4j.Logger;
-import org.json.JSONObject;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 import ua.edu.sumdu.labwork2.springapp.model.*;
-import ua.edu.sumdu.labwork2.springapp.services.StringToAlbumConverter;
-import ua.edu.sumdu.labwork2.springapp.services.impl.SaveToDocFileServiceImpl;
-import ua.edu.sumdu.labwork2.springapp.services.impl.HTTPConnectionServiceImpl;
-import ua.edu.sumdu.labwork2.springapp.services.impl.ImageDownloaderServiceImpl;
+import ua.edu.sumdu.labwork2.springapp.services.AlbumToDocFileService;
+import ua.edu.sumdu.labwork2.springapp.services.HTTPConnectionService;
 
-import java.io.File;
+import java.io.ByteArrayInputStream;
 import java.net.URL;
-import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
@@ -22,46 +21,45 @@ import java.util.concurrent.CompletableFuture;
 @AllArgsConstructor
 public class MainController {
 
-    public SaveToDocFileServiceImpl saveToDocFileServiceImpl;
-    public HTTPConnectionServiceImpl httpConnectionServiceImpl;
-    public ImageDownloaderServiceImpl imageDownloaderServiceImpl;
-    public StringToAlbumConverter stringToAlbumConverter;
+    private final AlbumToDocFileService albumToDocFileService;
+    private final HTTPConnectionService httpConnectionService;
+    private final Converter<String, Album> stringToAlbumConverter;
     final static Logger logger = Logger.getLogger(MainController.class);
 
-    @RequestMapping(path = "/searchAlbumInfo/{artist}/{album}", method = RequestMethod.GET)
+    @RequestMapping(path = "/searchAlbumInfo/{artist}/{album}", produces = { "application/json", "application/xml" }, method = RequestMethod.GET)
     @Async
-    public CompletableFuture<String> getAlbumInfo (@PathVariable(name = "artist") String artistName, @PathVariable(name = "album") String albumName) {
-
+    public CompletableFuture<Album> getAlbumInfo (@PathVariable(name = "artist") String artistName, @PathVariable(name = "album") String albumName) {
         logger.info("New request. Artist: " + artistName + ", album: " + albumName);
-        URL urlConnection = httpConnectionServiceImpl.buildUrl(artistName, albumName);
-        if (urlConnection == null) {
-            return CompletableFuture.completedFuture("Unexpected error!");
-        }
-        String result = httpConnectionServiceImpl.getRequestResult(urlConnection);
-        Album parsedAlbum = stringToAlbumConverter.convert(result);
-        if (parsedAlbum == null) {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("status", "error");
-            jsonObject.put("message", "Album not found");
-            logger.info(jsonObject.toString());
-            return CompletableFuture.completedFuture(jsonObject.toString());
-        }
-
-        Iterator<Image> imageIterator = parsedAlbum.getImages().iterator();
-        URL maxImageSizeUrl = null;
-        while (imageIterator.hasNext()) {
-            maxImageSizeUrl = imageIterator.next().getUrl();
-        }
-        if (maxImageSizeUrl != null) {
-            File image = imageDownloaderServiceImpl.downloadImage(maxImageSizeUrl, 512, parsedAlbum.getName() + parsedAlbum.getArtist().getName());
-            saveToDocFileServiceImpl.saveToFile(parsedAlbum, image);
-        }
-
+        Album parsedAlbum = getParsedAlbum(artistName, albumName);
         try {
-            return CompletableFuture.completedFuture(new JsonMapper().writer().writeValueAsString(parsedAlbum));
+            return CompletableFuture.completedFuture(parsedAlbum);
         } catch (Throwable e) {
             logger.info("Data display failed!", e);
             throw new RuntimeException(e);
         }
+    }
+
+    @RequestMapping(path = "/saveAlbumInfoToDoc/{artist}/{album}", produces = { "application/json", "application/xml" }, method = RequestMethod.GET)
+    public ResponseEntity<InputStreamResource> getAlbumDoc (@PathVariable(name = "artist") String artistName, @PathVariable(name = "album") String albumName) {
+        logger.info("New request. Artist: " + artistName + ", album: " + albumName);
+        Album parsedAlbum = getParsedAlbum(artistName, albumName);
+        if (parsedAlbum == null) {
+            return null;
+        }
+        byte[] byteArray = albumToDocFileService.saveToFile(parsedAlbum);
+        InputStreamResource resource = new InputStreamResource(new ByteArrayInputStream(byteArray));
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=" + albumToDocFileService.getDocFileName(artistName, albumName) + ".docx")
+                .body(resource);
+    }
+
+    private Album getParsedAlbum(String artistName, String albumName) {
+        URL urlConnection = httpConnectionService.buildUrl(artistName, albumName);
+        if (urlConnection == null) {
+            return null;
+        }
+        String result = httpConnectionService.getRequestResult(urlConnection);
+        return stringToAlbumConverter.convert(result);
     }
 }

@@ -1,7 +1,6 @@
 package ua.edu.sumdu.labwork2.springapp.services.impl;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.NoArgsConstructor;
 import org.apache.log4j.Logger;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.util.Units;
@@ -13,33 +12,24 @@ import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTP;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTR;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSectPr;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTText;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ua.edu.sumdu.labwork2.springapp.model.*;
-import ua.edu.sumdu.labwork2.springapp.services.saveToDocFileService;
+import ua.edu.sumdu.labwork2.springapp.services.AlbumToDocFileService;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.time.LocalDateTime;
+import java.util.Iterator;
 
+@NoArgsConstructor
 @Service
-public class SaveToDocFileServiceImpl implements saveToDocFileService {
+public class AlbumToDocFileServiceImpl implements AlbumToDocFileService {
 
-    final static Logger logger = Logger.getLogger(SaveToDocFileServiceImpl.class);
-
-    @Getter
-    @Setter
-    private String dirPath;
-
-    public SaveToDocFileServiceImpl(@Value("${lastfm.dir}") String dirPath) {
-        this.dirPath = dirPath;
-    }
-
+    final static Logger logger = Logger.getLogger(AlbumToDocFileServiceImpl.class);
 
     @Override
-    public void saveToFile(Album album, File imageFile) {
+    public byte[] saveToFile(Album album) {
 
         // создаем модель docx документа,
         // к которой будем прикручивать наполнение (колонтитулы, текст)
@@ -81,12 +71,26 @@ public class SaveToDocFileServiceImpl implements saveToDocFileService {
             System.out.println("Unexpected error!");
             logger.info("Creating footer is failed!", e);
         }
-        int format = XWPFDocument.PICTURE_TYPE_PNG;
-        try(FileInputStream addPictureStream = new FileInputStream(imageFile.getAbsoluteFile())) {
-            createParagraph(docxModel).addPicture(addPictureStream, format, imageFile.getName(), Units.toEMU(300), Units.toEMU(300));
-        } catch (InvalidFormatException | IOException e) {
-            System.out.println("Unexpected error!");
-            logger.info("Adding picture to paragraph is failed!", e);
+
+        //получаем URL картинки с максимальным размером
+        Iterator<Image> imageIterator = album.getImages().iterator();
+        URL maxImageSizeUrl = null;
+        while (imageIterator.hasNext()) {
+            maxImageSizeUrl = imageIterator.next().getUrl();
+        }
+        if (maxImageSizeUrl != null) {
+            InputStream imageInputStream = getImageInputStream(maxImageSizeUrl);
+            int format = XWPFDocument.PICTURE_TYPE_PNG;
+            try {
+                //добавляем картинку в параграф DOC документа
+                createParagraph(docxModel).addPicture(imageInputStream, format, "image", Units.toEMU(300), Units.toEMU(300));
+                if (imageInputStream != null) {
+                    imageInputStream.close();
+                }
+            } catch (InvalidFormatException | IOException e) {
+                System.out.println("Unexpected error!");
+                logger.info("Adding picture to paragraph is failed!", e);
+            }
         }
         createParagraph(docxModel).setText("Name: " + album.getName());
         createParagraph(docxModel).setText("Artist: " + album.getArtist().getName());
@@ -104,47 +108,49 @@ public class SaveToDocFileServiceImpl implements saveToDocFileService {
             tracksTable.getRow(0).getCell(0).setText("name");
             tracksTable.getRow(0).getCell(1).setText("duration");
             tracksTable.getRow(0).getCell(2).setText("url");
-            int RowCounter = 1;
+            int rowCounter = 1;
             for (Track track : album.getTracks()) {
-                tracksTable.getRow(RowCounter).getCell(0).setText(track.getName());
-                tracksTable.getRow(RowCounter).getCell(1).setText(String.valueOf(track.getDuration()));
-                tracksTable.getRow(RowCounter).getCell(2).setText(track.getUrl().toString());
-                RowCounter++;
+                tracksTable.getRow(rowCounter).getCell(0).setText(track.getName());
+                tracksTable.getRow(rowCounter).getCell(1).setText(String.valueOf(track.getDuration()));
+                tracksTable.getRow(rowCounter).getCell(2).setText(track.getUrl().toString());
+                rowCounter++;
             }
         }
 
-        // сохраняем модель docx документа в файл
-        File dir = new File(dirPath);
-        if (!dir.exists()) {
-            if (dir.mkdir()) {
-                logger.info("Directory " + dir.getAbsolutePath() + " is created!");
-            }
+        ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
+        try {
+            docxModel.write(byteArray);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        String nameFileDoc = album.getName() +
-                album.getArtist().getName() +
+        return byteArray.toByteArray();
+    }
+
+    @Override
+    public InputStream getImageInputStream(URL connection) {
+        InputStream in;
+        try {
+            HttpURLConnection urlConnection;
+            urlConnection = (HttpURLConnection) connection.openConnection();
+            urlConnection.setRequestMethod("GET");
+            urlConnection.connect();
+            in = urlConnection.getInputStream();
+            return in;
+        } catch (IOException e) {
+            logger.info("Connection or saving image on disk failed!", e);
+            System.out.println("Unexpected error!");
+            return null;
+        }
+    }
+
+    @Override
+    public String getDocFileName (String artistName, String albumName) {
+        String nameFileDoc = albumName +
+                artistName +
                 LocalDateTime.now().getYear() +
                 LocalDateTime.now().getMonth() +
                 LocalDateTime.now().getDayOfMonth();
-        String correctNameFileDoc = nameFileDoc.replaceAll("[?*<>.\\\\/|:]", "_");
-        String pathDocFile = dir.getPath() + "\\" + correctNameFileDoc + ".docx";
-        File fileDoc = new File(pathDocFile);
-        try {
-            if (fileDoc.exists()) {
-                if (fileDoc.delete()) {
-                    logger.info("Deleted file: " + fileDoc.getAbsolutePath());
-                }
-                fileDoc = new File(pathDocFile);
-            }
-            if (fileDoc.createNewFile()) {
-                logger.info("Created file: " + fileDoc.getAbsolutePath());
-            }
-            FileOutputStream outputStream = new FileOutputStream(fileDoc);
-            docxModel.write(outputStream);
-            outputStream.close();
-        } catch (IOException e) {
-            System.out.println("Unexpected error!");
-            logger.info("Saving doxc model to file is failed!", e);
-        }
+        return nameFileDoc.replaceAll("[?*<>.\\\\/|:]", "_");
     }
 
     @NotNull

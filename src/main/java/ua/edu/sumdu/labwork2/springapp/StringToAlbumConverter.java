@@ -1,4 +1,4 @@
-package ua.edu.sumdu.labwork2.springapp.services;
+package ua.edu.sumdu.labwork2.springapp;
 
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -20,7 +20,7 @@ public class StringToAlbumConverter implements Converter<String, Album> {
 
     @Override
     @Cacheable("albums")
-    public Album convert(@NotNull String source) {
+    public Album convert(@NotNull String source) throws JSONException {
         Album parsedAlbum;
         JSONObject albumJsonObject;
         try {
