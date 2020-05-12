@@ -1,5 +1,6 @@
 package ua.edu.sumdu.labwork2.springapp;
 
+import ua.edu.sumdu.labwork2.springapp.converters.StringToAlbumConverter;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;

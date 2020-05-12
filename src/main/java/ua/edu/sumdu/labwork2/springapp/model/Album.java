@@ -9,6 +9,8 @@ import java.util.Collection;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode
+@ToString
 public class Album {
     private String name;
     private Artist artist;

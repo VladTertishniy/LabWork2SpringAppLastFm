@@ -1,9 +1,6 @@
 package ua.edu.sumdu.labwork2.springapp.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.net.URL;
 
@@ -11,6 +8,8 @@ import java.net.URL;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode
+@ToString
 public class Track {
     String name;
     URL url;
