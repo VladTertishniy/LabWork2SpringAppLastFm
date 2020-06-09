@@ -2,7 +2,7 @@ package ua.edu.sumdu.labwork2.springapp.controller;
 
 import lombok.AllArgsConstructor;
 import org.apache.log4j.Logger;
-import org.springframework.core.convert.converter.Converter;
+import org.springframework.core.convert.ConversionService;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +23,7 @@ public class MainController {
 
     private final AlbumToDocFileService albumToDocFileService;
     private final HTTPConnectionService httpConnectionService;
-    private final Converter<String, Album> stringToAlbumConverter;
+    private final ConversionService conversionService;
     final static Logger logger = Logger.getLogger(MainController.class);
 
     @RequestMapping(path = "/searchAlbumInfo/{artist}/{album}", produces = { "application/json", "application/xml" }, method = RequestMethod.GET)
@@ -60,6 +60,6 @@ public class MainController {
             return null;
         }
         String result = httpConnectionService.getRequestResult(urlConnection);
-        return stringToAlbumConverter.convert(result);
+        return conversionService.convert(result, Album.class);
     }
 }
